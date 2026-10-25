@@ -437,6 +437,11 @@
             </StackPanel>
           </Grid>
           <TextBlock Classes="caption" TextWrapping="Wrap" Text="{DynamicResource presets.pdf_password_hint}" />
+          <StackPanel>
+            <TextBlock Classes="label" Text="{DynamicResource presets.pdf_open_password}" />
+            <TextBox Text="{Binding PdfOpenPassword}" PasswordChar="•" Classes="revealPasswordButton" MaxLength="64" />
+          </StackPanel>
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{DynamicResource presets.pdf_open_password_hint}" />
           <CheckBox Content="{DynamicResource presets.page_numbers}" IsChecked="{Binding PageNumbers}" />
         </StackPanel>
       </StackPanel>

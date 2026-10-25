@@ -221,16 +221,17 @@ public sealed class Preset
 
     /// <summary>Deep copy, used by editors so changes can be cancelled.</summary>
     /// <summary>
-    /// This preset without its PDF password, for copies that leave the library (history, an export).
-    /// <paramref name="mark"/> records that it was taken out (<see cref="PdfOptions.PasswordLeftOut"/>).
+    /// This preset without its PDF passwords, for copies that leave the library (history, an export).
+    /// <paramref name="mark"/> records that the one the PDF is locked with was taken out (<see cref="PdfOptions.PasswordLeftOut"/>).
     /// </summary>
     public Preset WithoutPassword(bool mark)
     {
-        if (Pdf.Password.Length == 0)
+        if (Pdf.Password.Length == 0 && Pdf.OpenPassword.Length == 0)
             return this;
         var copy = Clone();
+        copy.Pdf.PasswordLeftOut = mark && Pdf.Password.Length > 0;
         copy.Pdf.Password = "";
-        copy.Pdf.PasswordLeftOut = mark;
+        copy.Pdf.OpenPassword = "";
         return copy;
     }
 
@@ -549,6 +550,13 @@ public sealed class PdfOptions
     /// retry takes it from the preset again, and fails rather than write a PDF without it.
     /// </summary>
     public bool PasswordLeftOut { get; set; }
+
+    /// <summary>
+    /// The password a protected source PDF opens with, for PDF → PDF: the result is the same PDF without it (and
+    /// with <see cref="Password"/> instead when that is set). Saved with the preset like <see cref="Password"/>, and
+    /// left out of the same copies.
+    /// </summary>
+    public string OpenPassword { get; set; } = "";
 
     /// <summary>A PDF this preset writes gets a watermark, page numbers or a password (<see cref="Conversion.IPdfFinisher"/>).</summary>
     [JsonIgnore]

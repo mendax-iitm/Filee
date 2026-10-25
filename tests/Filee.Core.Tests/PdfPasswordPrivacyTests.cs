@@ -49,6 +49,18 @@ public class PdfPasswordPrivacyTests
     }
 
     [Fact]
+    public void The_open_password_is_left_out_too_but_nothing_is_marked_missing()
+    {
+        var preset = new Preset { TargetFormat = "pdf", Pdf = { OpenPassword = "source-1234" } };
+
+        var copy = preset.WithoutPassword(mark: true);
+
+        Assert.Equal("", copy.Pdf.OpenPassword);
+        Assert.False(copy.Pdf.PasswordLeftOut);
+        Assert.Equal("source-1234", preset.Pdf.OpenPassword);
+    }
+
+    [Fact]
     public async Task A_retry_without_its_password_fails_and_writes_no_pdf()
     {
         using var dir = new TempDir();

@@ -37,10 +37,47 @@ public sealed class PdfSharpConverter : IConverter, IPdfMerger, IPdfFinisher, II
 
     public Task<IReadOnlyList<string>> ConvertAsync(ConversionStep step, IProgress<double>? progress, CancellationToken cancellationToken) =>
         step.From != "pdf" ? Task.Run(() => ImageToPdf(step, progress, cancellationToken), cancellationToken)
-        : step.Preset.Pdf is { Compression: PdfCompression.None, RemoveMetadata: true, SplitPages: false, PageRange: "" }
-            ? Task.Run(() => WithoutMetadata(step, progress, cancellationToken), cancellationToken)
-        : step.Preset.Pdf.Compression == PdfCompression.None ? Task.Run(() => SplitOrExtract(step, progress, cancellationToken), cancellationToken)
-        : Task.Run(() => CompressAsync(step, progress, cancellationToken), cancellationToken);
+        : Task.Run(async () =>
+        {
+            var pdf = step.Preset.Pdf.OpenPassword.Length > 0 ? step with { InputPath = Unlock(step) } : step;
+            return pdf.Preset.Pdf is { Compression: PdfCompression.None, RemoveMetadata: true, SplitPages: false, PageRange: "" }
+                ? WithoutMetadata(pdf, progress, cancellationToken)
+                : pdf.Preset.Pdf.Compression == PdfCompression.None ? SplitOrExtract(pdf, progress, cancellationToken)
+                : await CompressAsync(pdf, progress, cancellationToken);
+        }, cancellationToken);
+
+    /// <summary>
+    /// The source PDF opened with <see cref="PdfOptions.OpenPassword"/> and saved unencrypted in the work folder, for
+    /// the rest of the step to read. Opened with the user password only (the owner password differs), its pages are
+    /// copied into a new PDF, as for a PDF locked only against changes (<see cref="OpenForChanges"/>).
+    /// </summary>
+    private static string Unlock(ConversionStep step)
+    {
+        var password = step.Preset.Pdf.OpenPassword;
+        var unlocked = Path.Combine(step.WorkDirectory, $"unlocked-{Guid.NewGuid():N}.pdf");
+        PdfDocument document;
+        try
+        {
+            document = PdfReader.Open(step.InputPath, password, PdfDocumentOpenMode.Modify);
+        }
+        catch (PdfReaderException ex) when (ex.Message.Contains("owner password", StringComparison.OrdinalIgnoreCase))
+        {
+            using var source = PdfReader.Open(step.InputPath, password, PdfDocumentOpenMode.Import);
+            document = new PdfDocument();
+            foreach (var page in source.Pages)
+                document.AddPage(page);
+        }
+        catch (PdfReaderException ex) when (ex.Message.Contains("password", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConversionRefusedException("error.pdf_open_password_wrong");
+        }
+        using (document)
+        {
+            document.SecurityHandler.SetEncryptionToNoneAndResetPasswords();
+            document.Save(unlocked);
+        }
+        return unlocked;
+    }
 
     /// <summary>Watermark, page numbers and password (PdfFinishing).</summary>
     public Task FinishAsync(string path, PdfOptions options, CancellationToken cancellationToken) =>

@@ -114,6 +114,11 @@ public sealed class ConversionService
             preset.Pdf.Password = password;
             preset.Pdf.PasswordLeftOut = false;
         }
+        if (preset.Pdf.OpenPassword.Length == 0 && _store.FindPreset(preset.Id)?.Pdf.OpenPassword is { Length: > 0 } openPassword)
+        {
+            preset = preset.Clone();
+            preset.Pdf.OpenPassword = openPassword;
+        }
         if (watchRuleId is not null && WatchRetry is { } watchRetry)
         {
             _ = watchRetry(watchRuleId, files, preset);

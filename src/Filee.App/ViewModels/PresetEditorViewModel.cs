@@ -122,6 +122,7 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         _watermark = _edit.Pdf.Watermark;
         _pageNumbers = _edit.Pdf.PageNumbers;
         _pdfPassword = _edit.Pdf.Password;
+        _pdfOpenPassword = _edit.Pdf.OpenPassword;
         _ocr = _edit.Pdf.Ocr;
         _ocrLanguage = OcrLanguageChoices.FirstOrDefault(l => l.Value == _edit.Pdf.OcrLanguage) ?? OcrLanguageChoices[0];
         _location = Locations.First(l => l.Value == _edit.Output.Location);
@@ -433,6 +434,9 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     [ObservableProperty] private bool _pageNumbers;
     [ObservableProperty] private string _pdfPassword;
 
+    /// <summary>The password a protected source PDF opens with, so PDF → PDF writes it unlocked (PdfOptions.OpenPassword).</summary>
+    [ObservableProperty] private string _pdfOpenPassword;
+
     /// <summary>AES-256 readers use at most 127 UTF-8 bytes of a password: the box takes no more.</summary>
     internal const int MaxPasswordBytes = 127;
 
@@ -705,6 +709,7 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         // PDF/A can't be encrypted, so the box is off while it is ticked.
         pdf.Password = ShowPdfBuild && !PdfA ? PdfPassword : "";
         pdf.PasswordLeftOut = false;
+        pdf.OpenPassword = ShowPdfBuild ? PdfOpenPassword : "";
         // Only where the option is shown, as with SaveEveryFrame below.
         pdf.Ocr = Recognizes;
         pdf.OcrLanguage = OcrLanguage.Value;
